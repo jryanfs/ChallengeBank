@@ -1,0 +1,26 @@
+services:
+  sqlserver-clients:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: challengebank-sql-clients
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "ChallengeBank@123"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-clients-data:/var/opt/mssql
+
+  sqlserver-transactions:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: challengebank-sql-transactions
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "ChallengeBank@123"
+    ports:
+      - "1434:1433"
+    volumes:
+      - sqlserver-transactions-data:/var/opt/mssql
+
+volumes:
+  sqlserver-clients-data:
+  sqlserver-transactions-data:
