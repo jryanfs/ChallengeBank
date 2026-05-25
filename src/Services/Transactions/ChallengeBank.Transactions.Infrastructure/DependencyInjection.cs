@@ -1,7 +1,7 @@
 using ChallengeBank.BuildingBlocks.Application.Interfaces;
 using ChallengeBank.Transactions.Domain.Repositories;
-using ChallengeBank.Transactions.Infrastructure.Persistence;
 using ChallengeBank.Transactions.Infrastructure.Repositories;
+using ChallengeBank.Transactions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +19,7 @@ public static class DependencyInjection
             options.UseSqlServer(connectionString, sql =>
                 sql.MigrationsHistoryTable("__EFMigrationsHistory", "transactions")));
 
-        services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<ITransferRepository, TransferRepository>();
         services.AddScoped<ITransactionsUnitOfWork>(sp => sp.GetRequiredService<TransactionsDbContext>());
 
         return services;

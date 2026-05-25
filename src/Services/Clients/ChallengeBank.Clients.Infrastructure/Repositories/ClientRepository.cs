@@ -10,6 +10,12 @@ public sealed class ClientRepository(ClientsDbContext context) : IClientReposito
     public Task<Client?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.Clients.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
+    public Task<Client?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        context.Clients.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+
+    public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default) =>
+        context.Clients.AsNoTracking().AnyAsync(c => c.Id == id, cancellationToken);
+
     public Task<Client?> GetByDocumentAsync(string documentNumber, CancellationToken cancellationToken = default) =>
         context.Clients.FirstOrDefaultAsync(c => c.DocumentNumber == documentNumber, cancellationToken);
 

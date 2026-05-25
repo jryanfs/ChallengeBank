@@ -23,7 +23,7 @@ namespace ChallengeBank.Transactions.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("ChallengeBank.Transactions.Domain.Entities.Transaction", b =>
+            modelBuilder.Entity("ChallengeBank.Transactions.Domain.Entities.Transfer", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -33,9 +33,6 @@ namespace ChallengeBank.Transactions.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("ClientId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -43,12 +40,13 @@ namespace ChallengeBank.Transactions.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<Guid>("ReceiverUserId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Type")
+                    b.Property<Guid>("SenderUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -58,9 +56,11 @@ namespace ChallengeBank.Transactions.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClientId");
+                    b.HasIndex("ReceiverUserId");
 
-                    b.ToTable("Transactions", "transactions");
+                    b.HasIndex("SenderUserId");
+
+                    b.ToTable("Transfers", "transactions");
                 });
 #pragma warning restore 612, 618
         }

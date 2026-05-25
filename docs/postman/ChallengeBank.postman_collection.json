@@ -1,465 +1,426 @@
 {
   "info": {
-    "_postman_id": "challengebank-api-collection",
+    "_postman_id": "challengebank-api-v2",
     "name": "ChallengeBank API",
-    "description": "Collection para testar a **API unificada** ChallengeBank (porta 5000) — Clientes e Transações.\n\n## Pré-requisitos\n1. SQL Server LocalDB: `sqllocaldb start MSSQLLocalDB`\n2. API em execução: `dotnet run --project src/Host/ChallengeBank.API`\n3. Swagger: http://localhost:5000/swagger\n\n## Ordem sugerida\n1. Health Check\n2. Criar Cliente → salva `clientId`\n3. Consultar Cliente\n4. Criar Transação → salva `transactionId`\n5. Consultar Transação",
+    "description": "API unificada — envelope: `{ Status, Message, Trace, Data? }` (mensagens em português).\n\n**Auth:** Login (admin) primeiro → `Data.accessToken` no header Bearer.\n\n**Credenciais:** admin/Admin@123 | user/User@123",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:5000"
-    },
-    {
-      "key": "clientId",
-      "value": ""
-    },
-    {
-      "key": "transactionId",
-      "value": ""
-    }
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "clientId", "value": "" },
+    { "key": "clientId2", "value": "" },
+    { "key": "transferId", "value": "" }
   ],
   "item": [
     {
-      "name": "01 - Clients API",
+      "name": "Autenticação",
+      "item": [
+        {
+          "name": "Login (admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                "if (pm.response.code === 200) {",
+                "  const token = pm.response.json().Data.accessToken;",
+                "  pm.collectionVariables.set('accessToken', token);",
+                "  pm.environment.set('accessToken', token);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Login (user)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  const token = pm.response.json().Data.accessToken;",
+                "  pm.collectionVariables.set('accessToken', token);",
+                "  pm.environment.set('accessToken', token);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"user\",\n  \"password\": \"User@123\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
       "item": [
         {
           "name": "Health Check",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
-            },
-            "description": "Verifica se a API de Clientes e o banco estão acessíveis."
-          },
-          "response": []
-        },
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
         {
-          "name": "Create Client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 201 Created', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "if (pm.response.code === 201) {",
-                  "    const body = pm.response.json();",
-                  "    pm.collectionVariables.set('clientId', body.id);",
-                  "    pm.test('clientId salvo na collection', function () {",
-                  "        pm.expect(body.id).to.be.a('string');",
-                  "    });",
-                  "}"
-                ]
-              }
+          "name": "Create Client (com bankingDetails)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('clientId', pm.response.json().Data.id);",
+                "}"
+              ]
             }
-          ],
+          }],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fullName\": \"Maria Silva Santos\",\n  \"documentNumber\": \"12345678901\",\n  \"email\": \"maria.silva@challengebank.com\"\n}"
+              "raw": "{\n  \"fullName\": \"Maria Silva Santos\",\n  \"documentNumber\": \"12345678901\",\n  \"email\": \"maria.silva@challengebank.com\",\n  \"address\": {\n    \"street\": \"Rua das Flores, 100\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"postalCode\": \"01310-100\"\n  },\n  \"bankingDetails\": {\n    \"agency\": \"0001\",\n    \"accountNumber\": \"12345-6\"\n  }\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/clients",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "clients"]
+            "url": "{{baseUrl}}/api/clients"
+          }
+        },
+        {
+          "name": "Create Client 2 (destinatário)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('clientId2', pm.response.json().Data.id);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"João Pedro Oliveira\",\n  \"documentNumber\": \"98765432100\",\n  \"email\": \"joao.oliveira@challengebank.com\",\n  \"bankingDetails\": {\n    \"agency\": \"0002\",\n    \"accountNumber\": \"98765-4\"\n  }\n}"
             },
-            "description": "Cadastra um novo cliente. O `id` retornado é gravado na variável `clientId`."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/clients"
+          }
         },
         {
           "name": "Get Client by Id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "if (pm.response.code === 200) {",
-                  "    const body = pm.response.json();",
-                  "    pm.test('Cliente possui dados esperados', function () {",
-                  "        pm.expect(body).to.have.property('id');",
-                  "        pm.expect(body).to.have.property('fullName');",
-                  "        pm.expect(body).to.have.property('documentNumber');",
-                  "        pm.expect(body).to.have.property('email');",
-                  "        pm.expect(body).to.have.property('status');",
-                  "    });",
-                  "}"
-                ]
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json().Data;",
+                  "pm.test('tem bankingDetails', () => pm.expect(b).to.have.property('bankingDetails'));"
+              ]
             }
-          ],
+          }],
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/clients/{{clientId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "clients", "{{clientId}}"]
-            },
-            "description": "Consulta cliente pelo GUID. Execute **Create Client** antes."
-          },
-          "response": []
-        },
-        {
-          "name": "Create Client - Duplicate Document (409)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 409 Conflict', function () {",
-                  "    pm.response.to.have.status(409);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Accept", "value": "application/json" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"fullName\": \"Maria Silva Duplicada\",\n  \"documentNumber\": \"12345678901\",\n  \"email\": \"outro.email@challengebank.com\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/clients",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "clients"]
-            },
-            "description": "Reenvia o mesmo documento para validar regra de conflito."
-          },
-          "response": []
-        },
-        {
-          "name": "Get Client - Not Found (404)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 404 Not Found', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/clients/00000000-0000-0000-0000-000000000000",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "clients", "00000000-0000-0000-0000-000000000000"]
-            },
-            "description": "Consulta um GUID inexistente."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "02 - Transactions API",
-      "item": [
-        {
-          "name": "Health Check",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
-            },
-            "description": "Verifica se a API de Transações e o banco estão acessíveis."
-          },
-          "response": []
-        },
-        {
-          "name": "Create Transaction - Credit",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 201 Created', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "",
-                  "if (pm.response.code === 201) {",
-                  "    const body = pm.response.json();",
-                  "    pm.collectionVariables.set('transactionId', body.id);",
-                  "    pm.test('transactionId salvo na collection', function () {",
-                  "        pm.expect(body.id).to.be.a('string');",
-                  "    });",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"amount\": 1500.75,\n  \"type\": 1,\n  \"description\": \"Depósito inicial\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/transactions",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "transactions"]
-            },
-            "description": "Cria transação de crédito.\n\n**type:** `1` = Credit, `2` = Debit\n\nExecute **Create Client** antes para preencher `clientId`."
-          },
-          "response": []
-        },
-        {
-          "name": "Create Transaction - Debit",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"amount\": 250.00,\n  \"type\": 2,\n  \"description\": \"Saque em caixa eletrônico\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/transactions",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "transactions"]
-            },
-            "description": "Cria transação de débito (`type`: 2)."
-          },
-          "response": []
-        },
-        {
-          "name": "Get Transaction by Id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 200 OK', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "if (pm.response.code === 200) {",
-                  "    const body = pm.response.json();",
-                  "    pm.test('Transação possui dados esperados', function () {",
-                  "        pm.expect(body).to.have.property('id');",
-                  "        pm.expect(body).to.have.property('clientId');",
-                  "        pm.expect(body).to.have.property('amount');",
-                  "        pm.expect(body).to.have.property('type');",
-                  "        pm.expect(body).to.have.property('status');",
-                  "    });",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/transactions/{{transactionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "transactions", "{{transactionId}}"]
-            },
-            "description": "Consulta transação pelo GUID. Execute **Create Transaction - Credit** antes."
-          },
-          "response": []
-        },
-        {
-          "name": "Create Transaction - Invalid Amount (400)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 400 Bad Request', function () {",
-                  "    pm.response.to.have.status(400);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"amount\": 0,\n  \"type\": 1,\n  \"description\": \"Valor inválido\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/transactions",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "transactions"]
-            },
-            "description": "Valida regra de negócio: valor deve ser maior que zero."
-          },
-          "response": []
-        },
-        {
-          "name": "Get Transaction - Not Found (404)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status 404 Not Found', function () {",
-                  "    pm.response.to.have.status(404);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/transactions/00000000-0000-0000-0000-000000000000",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "transactions", "00000000-0000-0000-0000-000000000000"]
-            },
-            "description": "Consulta um GUID inexistente."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "03 - Fluxo completo (Runner)",
-      "item": [
-        {
-          "name": "1. Clients - Health Check",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/health"
-          },
-          "response": []
-        },
-        {
-          "name": "2. Clients - Create Client",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('clientId', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"fullName\": \"João Pedro Oliveira\",\n  \"documentNumber\": \"98765432100\",\n  \"email\": \"joao.oliveira@challengebank.com\"\n}"
-            },
-            "url": "{{baseUrl}}/api/clients"
-          },
-          "response": []
-        },
-        {
-          "name": "3. Clients - Get Client by Id",
-          "request": {
-            "method": "GET",
             "url": "{{baseUrl}}/api/clients/{{clientId}}"
-          },
-          "response": []
+          }
         },
         {
-          "name": "4. Transactions - Health Check",
-          "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/health"
-          },
-          "response": []
-        },
-        {
-          "name": "5. Transactions - Create Credit",
+          "name": "Patch Client (parcial) — Admin",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const token = pm.collectionVariables.get('accessToken');",
+                  "if (!token) {",
+                  "  throw new Error('Execute Login (admin) antes — PATCH exige role Admin.');",
+                  "}"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
-                "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('transactionId', pm.response.json().id);",
-                  "}"
+                  "if (pm.response.code === 403) {",
+                  "  console.warn('403: use Login (admin), não Login (user). Refaça o login e tente de novo.');",
+                  "}",
+                  "pm.test('200 OK (admin)', () => pm.response.to.have.status(200));"
                 ]
               }
             }
           ],
           "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"amount\": 5000.00,\n  \"type\": 1,\n  \"description\": \"Transferência recebida\"\n}"
+              "raw": "{\n  \"name\": \"Maria Silva Atualizada\",\n  \"bankingDetails\": {\n    \"agency\": \"0001\",\n    \"accountNumber\": \"99999-9\"\n  }\n}"
             },
-            "url": "{{baseUrl}}/api/transactions"
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/clients/{{clientId}}"
+          }
         },
         {
-          "name": "6. Transactions - Get Transaction by Id",
+          "name": "Get Client - Not Found",
           "request": {
             "method": "GET",
-            "url": "{{baseUrl}}/api/transactions/{{transactionId}}"
-          },
-          "response": []
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/clients/00000000-0000-0000-0000-000000000000"
+          }
         }
-      ],
-      "description": "Sequência end-to-end para usar com **Collection Runner** do Postman."
+      ]
+    },
+    {
+      "name": "Transferências",
+      "item": [
+        {
+          "name": "Create Transfer",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('transferId', pm.response.json().Data.id);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderUserId\": \"{{clientId}}\",\n  \"receiverUserId\": \"{{clientId2}}\",\n  \"amount\": 1500.75,\n  \"description\": \"Pagamento de serviços\"\n}"
+            },
+            "url": "{{baseUrl}}/api/transfers"
+          }
+        },
+        {
+          "name": "Get Transfer by Id",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('status Completed', () => pm.expect(pm.response.json().Data.status).to.eql(2));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/transfers/{{transferId}}"
+          }
+        },
+        {
+          "name": "List Transfers by User — Admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/transfers/user/{{clientId}}"
+          }
+        },
+        {
+          "name": "Create Transfer - mesmo usuário (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderUserId\": \"{{clientId}}\",\n  \"receiverUserId\": \"{{clientId}}\",\n  \"amount\": 100,\n  \"description\": \"Inválido\"\n}"
+            },
+            "url": "{{baseUrl}}/api/transfers"
+          }
+        },
+        {
+          "name": "Get Transfer - Not Found",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/transfers/00000000-0000-0000-0000-000000000000"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fluxo completo (Runner)",
+      "item": [
+        {
+          "name": "0. Login Admin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  const token = pm.response.json().Data.accessToken;",
+                "  pm.collectionVariables.set('accessToken', token);",
+                "  pm.environment.set('accessToken', token);",
+                "}"
+              ]
+            }
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "1. Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "2. Create Client",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code===201) pm.collectionVariables.set('clientId', pm.response.json().Data.id);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Ana Costa\",\n  \"documentNumber\": \"11122233344\",\n  \"email\": \"ana@challengebank.com\",\n  \"bankingDetails\": { \"agency\": \"0001\", \"accountNumber\": \"11111-1\" }\n}" },
+            "url": "{{baseUrl}}/api/clients"
+          }
+        },
+        {
+          "name": "3. Create Client 2",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code===201) pm.collectionVariables.set('clientId2', pm.response.json().Data.id);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Bruno Lima\",\n  \"documentNumber\": \"55566677788\",\n  \"email\": \"bruno@challengebank.com\",\n  \"bankingDetails\": { \"agency\": \"0002\", \"accountNumber\": \"22222-2\" }\n}" },
+            "url": "{{baseUrl}}/api/clients"
+          }
+        },
+        {
+          "name": "4. Get Client",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/clients/{{clientId}}"
+          }
+        },
+        {
+          "name": "5. Create Transfer",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code===201) pm.collectionVariables.set('transferId', pm.response.json().Data.id);"] } }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"senderUserId\": \"{{clientId}}\",\n  \"receiverUserId\": \"{{clientId2}}\",\n  \"amount\": 500,\n  \"description\": \"Transferência teste\"\n}" },
+            "url": "{{baseUrl}}/api/transfers"
+          }
+        },
+        {
+          "name": "6. List Transfers",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/transfers/user/{{clientId}}"
+          }
+        },
+        {
+          "name": "7. Get Transfer",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/transfers/{{transferId}}"
+          }
+        }
+      ]
     }
   ]
 }

@@ -7,7 +7,7 @@ namespace ChallengeBank.Transactions.Infrastructure.Persistence;
 public sealed class TransactionsDbContext(DbContextOptions<TransactionsDbContext> options)
     : DbContext(options), ITransactionsUnitOfWork
 {
-    public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<Transfer> Transfers => Set<Transfer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

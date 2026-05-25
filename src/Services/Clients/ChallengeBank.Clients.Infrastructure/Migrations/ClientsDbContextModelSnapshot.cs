@@ -62,6 +62,71 @@ namespace ChallengeBank.Clients.Infrastructure.Migrations
 
                     b.ToTable("Clients", "clients");
                 });
+
+            modelBuilder.Entity("ChallengeBank.Clients.Domain.Entities.Client", b =>
+                {
+                    b.OwnsOne("ChallengeBank.Clients.Domain.ValueObjects.Address", "Address", b1 =>
+                        {
+                            b1.Property<Guid>("ClientId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("City")
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)")
+                                .HasColumnName("AddressCity");
+
+                            b1.Property<string>("PostalCode")
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("AddressPostalCode");
+
+                            b1.Property<string>("State")
+                                .HasMaxLength(50)
+                                .HasColumnType("nvarchar(50)")
+                                .HasColumnName("AddressState");
+
+                            b1.Property<string>("Street")
+                                .HasMaxLength(300)
+                                .HasColumnType("nvarchar(300)")
+                                .HasColumnName("AddressStreet");
+
+                            b1.HasKey("ClientId");
+
+                            b1.ToTable("Clients", "clients");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ClientId");
+                        });
+
+                    b.OwnsOne("ChallengeBank.Clients.Domain.ValueObjects.BankingDetails", "BankingDetails", b1 =>
+                        {
+                            b1.Property<Guid>("ClientId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("AccountNumber")
+                                .IsRequired()
+                                .HasMaxLength(30)
+                                .HasColumnType("nvarchar(30)")
+                                .HasColumnName("BankAccountNumber");
+
+                            b1.Property<string>("Agency")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("BankAgency");
+
+                            b1.HasKey("ClientId");
+
+                            b1.ToTable("Clients", "clients");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ClientId");
+                        });
+
+                    b.Navigation("Address");
+
+                    b.Navigation("BankingDetails");
+                });
 #pragma warning restore 612, 618
         }
     }
