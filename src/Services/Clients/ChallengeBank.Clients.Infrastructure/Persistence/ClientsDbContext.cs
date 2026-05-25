@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ChallengeBank.Clients.Infrastructure.Persistence;
 
-public sealed class ClientsDbContext(DbContextOptions<ClientsDbContext> options) : DbContext(options), IUnitOfWork
+public sealed class ClientsDbContext(DbContextOptions<ClientsDbContext> options) : DbContext(options), IClientsUnitOfWork
 {
     public DbSet<Client> Clients => Set<Client>();
 

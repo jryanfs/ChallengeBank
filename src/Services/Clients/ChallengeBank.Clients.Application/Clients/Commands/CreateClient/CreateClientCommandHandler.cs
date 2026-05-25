@@ -9,7 +9,7 @@ namespace ChallengeBank.Clients.Application.Clients.Commands.CreateClient;
 
 public sealed class CreateClientCommandHandler(
     IClientRepository clientRepository,
-    IUnitOfWork unitOfWork) : ICommandHandler<CreateClientCommand, Result<Guid>>
+    IClientsUnitOfWork unitOfWork) : ICommandHandler<CreateClientCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
     {

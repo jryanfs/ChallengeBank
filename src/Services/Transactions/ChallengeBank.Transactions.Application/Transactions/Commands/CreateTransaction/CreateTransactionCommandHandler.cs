@@ -9,7 +9,7 @@ namespace ChallengeBank.Transactions.Application.Transactions.Commands.CreateTra
 
 public sealed class CreateTransactionCommandHandler(
     ITransactionRepository transactionRepository,
-    IUnitOfWork unitOfWork) : ICommandHandler<CreateTransactionCommand, Result<Guid>>
+    ITransactionsUnitOfWork unitOfWork) : ICommandHandler<CreateTransactionCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CreateTransactionCommand command, CancellationToken cancellationToken)
     {

@@ -1,126 +1,233 @@
 # ChallengeBank — Microsserviços Bancários
 
-Solução em **C# 12** / **.NET 8** com **Clean Architecture**, **SOLID** e separação por bounded contexts para o desafio técnico de ambiente bancário (Clientes e Transações).
+
+
+Solução em **C# 12** / **.NET 8** com **Clean Architecture**, **SOLID** e separação por bounded contexts (Clientes e Transações), com **API unificada** e **banco de dados único**.
+
+
 
 ## Estrutura da solução
 
+
+
 ```
+
 ChallengeBank/
+
 ├── src/
+
 │   ├── BuildingBlocks/              # Abstrações compartilhadas (DDD + CQRS)
-│   │   ├── ChallengeBank.BuildingBlocks.Domain
-│   │   └── ChallengeBank.BuildingBlocks.Application
+
+│   ├── Host/
+
+│   │   └── ChallengeBank.API        # API única + Swagger unificado
+
 │   └── Services/
-│       ├── Clients/                 # Microsserviço de Clientes
-│       │   ├── ChallengeBank.Clients.Domain
-│       │   ├── ChallengeBank.Clients.Application
-│       │   ├── ChallengeBank.Clients.Infrastructure   # EF Core + SQL Server
-│       │   └── ChallengeBank.Clients.API
-│       └── Transactions/            # Microsserviço de Transações
-│           ├── ChallengeBank.Transactions.Domain
-│           ├── ChallengeBank.Transactions.Application
-│           ├── ChallengeBank.Transactions.Infrastructure
-│           └── ChallengeBank.Transactions.API
+
+│       ├── Clients/                 # Bounded context Clientes
+
+│       │   ├── Domain / Application / Infrastructure
+
+│       └── Transactions/          # Bounded context Transações
+
+│           ├── Domain / Application / Infrastructure
+
 ├── tests/
-│   ├── Clients/
-│   └── Transactions/
-└── docker/
-    └── docker-compose.yml           # SQL Server (um banco por serviço)
+
+└── challengerbank/                  # SQL Server em container (opcional)
+
 ```
+
+
+
+## Banco de dados
+
+
+
+Um único banco **`ChallengeBank`** no SQL Server, com schemas separados:
+
+
+
+| Schema | Tabelas |
+
+|--------|---------|
+
+| `clients` | `Clients` |
+
+| `transactions` | `Transactions` |
+
+
+
+Connection string: `ChallengeBankDb` em `src/Host/ChallengeBank.API/appsettings.json`
+
+
 
 ## Camadas (Clean Architecture)
 
+
+
 | Camada | Responsabilidade |
+
 |--------|------------------|
+
 | **Domain** | Entidades, enums, regras de negócio, interfaces de repositório |
+
 | **Application** | Commands/Queries (CQRS), handlers, DTOs, `Result` pattern |
+
 | **Infrastructure** | EF Core, `DbContext`, repositórios, migrations |
-| **API** | Controllers finos, DI, Swagger, health checks |
 
-### Padrões aplicados
+| **API (Host)** | Controllers, DI, Swagger unificado, health checks |
 
-- **DDD**: `AggregateRoot`, `Entity`, `ValueObject`, `DomainException`
-- **CQRS**: `ICommand` / `IQuery` com handlers dedicados
-- **Repository**: abstração no Domain, implementação na Infrastructure
-- **Unit of Work**: `IUnitOfWork` via `DbContext`
-- **Result**: respostas de aplicação sem exceções para fluxo de negócio esperado
+
 
 ## Pré-requisitos
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (o SDK 9 também compila projetos `net8.0`)
-- Docker (opcional, para SQL Server local)
+
+
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+
+- **SQL Server LocalDB** (padrão) ou **ChallengerBank** — ver `challengerbank/README.md`
+
+
 
 ## Como executar
 
-### 1. Subir os bancos (Docker)
+
+
+### Opção A — LocalDB (padrão)
+
+
 
 ```bash
-cd docker
-docker compose up -d
+
+sqllocaldb start MSSQLLocalDB
+
+dotnet run --project src/Host/ChallengeBank.API
+
 ```
 
-- **Clientes**: `localhost:1433` → database `ChallengeBank_Clients`
-- **Transações**: `localhost:1434` → database `ChallengeBank_Transactions`
 
-### 2. Aplicar migrations
+
+### Opção B — SQL Server (ChallengerBank)
+
+
 
 ```bash
-dotnet ef migrations add InitialCreate -p src/Services/Clients/ChallengeBank.Clients.Infrastructure -s src/Services/Clients/ChallengeBank.Clients.API
-dotnet ef database update -p src/Services/Clients/ChallengeBank.Clients.Infrastructure -s src/Services/Clients/ChallengeBank.Clients.API
 
-dotnet ef migrations add InitialCreate -p src/Services/Transactions/ChallengeBank.Transactions.Infrastructure -s src/Services/Transactions/ChallengeBank.Transactions.API
-dotnet ef database update -p src/Services/Transactions/ChallengeBank.Transactions.Infrastructure -s src/Services/Transactions/ChallengeBank.Transactions.API
+cd challengerbank && docker compose up -d
+
+dotnet run --project src/Host/ChallengeBank.API --launch-profile ChallengerBank
+
 ```
 
-> Instale a ferramenta global se necessário: `dotnet tool install --global dotnet-ef`
 
-### 3. Rodar as APIs
+
+No Visual Studio: perfil **ChallengerBank** em `ChallengeBank.API`. Detalhes em `challengerbank/README.md`.
+
+
+
+Em **Development** e **ChallengerBank**, as migrations são aplicadas automaticamente ao iniciar a API.
+
+
+
+**Instância SQL Server nativa:** copie `appsettings.Local.example.json` → `appsettings.Local.json` na pasta `ChallengeBank.API`.
+
+
+
+### Migrations (manual, se necessário)
+
+
 
 ```bash
-dotnet run --project src/Services/Clients/ChallengeBank.Clients.API
-dotnet run --project src/Services/Transactions/ChallengeBank.Transactions.API
+
+dotnet ef database update -p src/Services/Clients/ChallengeBank.Clients.Infrastructure -s src/Host/ChallengeBank.API
+
+dotnet ef database update -p src/Services/Transactions/ChallengeBank.Transactions.Infrastructure -s src/Host/ChallengeBank.API
+
 ```
 
-| Serviço | HTTP | Swagger |
-|---------|------|---------|
-| Clientes | http://localhost:5001 | /swagger |
-| Transações | http://localhost:5002 | /swagger |
+
+
+> `dotnet tool install --global dotnet-ef`
+
+
+
+### 3. Rodar a API (Visual Studio 2022)
+
+
+
+**Projeto de inicialização:** `ChallengeBank.API` (`src/Host/ChallengeBank.API`)
+
+
+
+```bash
+
+dotnet run --project src/Host/ChallengeBank.API
+
+```
+
+
+
+| Recurso | URL |
+
+|---------|-----|
+
+| Swagger (tudo em um) | http://localhost:5000/swagger |
+
+| Health check | http://localhost:5000/health |
+
+
 
 ### 4. Testes
 
+
+
 ```bash
+
 dotnet test
+
 ```
 
-## Endpoints iniciais
 
-**Clientes**
+
+## Postman
+
+
+
+Importe `docs/postman/ChallengeBank.postman_collection.json` — base URL única: `http://localhost:5000`
+
+
+
+## Endpoints
+
+
 
 - `POST /api/clients` — cadastrar cliente
-- `GET /api/clients/{id}` — consultar cliente
-- `GET /health` — health check
 
-**Transações**
+- `GET /api/clients/{id}` — consultar cliente
 
 - `POST /api/transactions` — registrar transação
+
 - `GET /api/transactions/{id}` — consultar transação
-- `GET /health` — health check
 
-## Próximos passos sugeridos (desafio)
+- `GET /health` — health check (ambos os DbContexts)
 
-- [ ] Validação com FluentValidation
-- [ ] Comunicação assíncrona entre serviços (mensageria / integration events)
-- [ ] API Gateway ou BFF
-- [ ] Autenticação/autorização (JWT)
-- [ ] Observabilidade (OpenTelemetry, logs estruturados)
-- [ ] Testes de integração e arquitetura
-- [ ] CI/CD e containers por microsserviço
+
 
 ## Stack
 
+
+
 | Item | Tecnologia |
+
 |------|------------|
+
 | Linguagem | C# 12 |
+
 | Framework | .NET 8 |
-| Banco | SQL Server |
+
+| Banco | SQL Server (banco único `ChallengeBank`) |
+
 | ORM | Entity Framework Core 8 |
+
+

@@ -1,0 +1,465 @@
+{
+  "info": {
+    "_postman_id": "challengebank-api-collection",
+    "name": "ChallengeBank API",
+    "description": "Collection para testar a **API unificada** ChallengeBank (porta 5000) — Clientes e Transações.\n\n## Pré-requisitos\n1. SQL Server LocalDB: `sqllocaldb start MSSQLLocalDB`\n2. API em execução: `dotnet run --project src/Host/ChallengeBank.API`\n3. Swagger: http://localhost:5000/swagger\n\n## Ordem sugerida\n1. Health Check\n2. Criar Cliente → salva `clientId`\n3. Consultar Cliente\n4. Criar Transação → salva `transactionId`\n5. Consultar Transação",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "clientId",
+      "value": ""
+    },
+    {
+      "key": "transactionId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Clients API",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica se a API de Clientes e o banco estão acessíveis."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('clientId', body.id);",
+                  "    pm.test('clientId salvo na collection', function () {",
+                  "        pm.expect(body.id).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Maria Silva Santos\",\n  \"documentNumber\": \"12345678901\",\n  \"email\": \"maria.silva@challengebank.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clients",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clients"]
+            },
+            "description": "Cadastra um novo cliente. O `id` retornado é gravado na variável `clientId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Client by Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Cliente possui dados esperados', function () {",
+                  "        pm.expect(body).to.have.property('id');",
+                  "        pm.expect(body).to.have.property('fullName');",
+                  "        pm.expect(body).to.have.property('documentNumber');",
+                  "        pm.expect(body).to.have.property('email');",
+                  "        pm.expect(body).to.have.property('status');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/clients/{{clientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clients", "{{clientId}}"]
+            },
+            "description": "Consulta cliente pelo GUID. Execute **Create Client** antes."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Client - Duplicate Document (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Maria Silva Duplicada\",\n  \"documentNumber\": \"12345678901\",\n  \"email\": \"outro.email@challengebank.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clients",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clients"]
+            },
+            "description": "Reenvia o mesmo documento para validar regra de conflito."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Client - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/clients/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clients", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "Consulta um GUID inexistente."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Transactions API",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica se a API de Transações e o banco estão acessíveis."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Transaction - Credit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('transactionId', body.id);",
+                  "    pm.test('transactionId salvo na collection', function () {",
+                  "        pm.expect(body.id).to.be.a('string');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"amount\": 1500.75,\n  \"type\": 1,\n  \"description\": \"Depósito inicial\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            },
+            "description": "Cria transação de crédito.\n\n**type:** `1` = Credit, `2` = Debit\n\nExecute **Create Client** antes para preencher `clientId`."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Transaction - Debit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"amount\": 250.00,\n  \"type\": 2,\n  \"description\": \"Saque em caixa eletrônico\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            },
+            "description": "Cria transação de débito (`type`: 2)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction by Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Transação possui dados esperados', function () {",
+                  "        pm.expect(body).to.have.property('id');",
+                  "        pm.expect(body).to.have.property('clientId');",
+                  "        pm.expect(body).to.have.property('amount');",
+                  "        pm.expect(body).to.have.property('type');",
+                  "        pm.expect(body).to.have.property('status');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/{{transactionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "{{transactionId}}"]
+            },
+            "description": "Consulta transação pelo GUID. Execute **Create Transaction - Credit** antes."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Transaction - Invalid Amount (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"amount\": 0,\n  \"type\": 1,\n  \"description\": \"Valor inválido\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            },
+            "description": "Valida regra de negócio: valor deve ser maior que zero."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transaction - Not Found (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "Consulta um GUID inexistente."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Fluxo completo (Runner)",
+      "item": [
+        {
+          "name": "1. Clients - Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Clients - Create Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('clientId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"João Pedro Oliveira\",\n  \"documentNumber\": \"98765432100\",\n  \"email\": \"joao.oliveira@challengebank.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/clients"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Clients - Get Client by Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/clients/{{clientId}}"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Transactions - Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          },
+          "response": []
+        },
+        {
+          "name": "5. Transactions - Create Credit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('transactionId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{clientId}}\",\n  \"amount\": 5000.00,\n  \"type\": 1,\n  \"description\": \"Transferência recebida\"\n}"
+            },
+            "url": "{{baseUrl}}/api/transactions"
+          },
+          "response": []
+        },
+        {
+          "name": "6. Transactions - Get Transaction by Id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/transactions/{{transactionId}}"
+          },
+          "response": []
+        }
+      ],
+      "description": "Sequência end-to-end para usar com **Collection Runner** do Postman."
+    }
+  ]
+}
