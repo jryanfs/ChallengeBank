@@ -23,10 +23,8 @@ bld/
 *.rsuser
 *.DotSettings.user
 
-## EF Core
-**/Migrations/
-
 ## Secrets & local config
+appsettings.Local.json
 appsettings.*.local.json
 secrets.json
 *.pfx

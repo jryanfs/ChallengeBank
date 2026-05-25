@@ -3,15 +3,18 @@ using ChallengeBank.Transactions.Application.Transactions.Queries.GetTransaction
 using ChallengeBank.Transactions.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ChallengeBank.Transactions.API.Controllers;
+namespace ChallengeBank.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Tags("Transações")]
 public sealed class TransactionsController(
     CreateTransactionCommandHandler createTransactionHandler,
     GetTransactionByIdQueryHandler getTransactionByIdHandler) : ControllerBase
 {
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateTransactionRequest request, CancellationToken cancellationToken)
     {
         var command = new CreateTransactionCommand(
@@ -29,6 +32,8 @@ public sealed class TransactionsController(
     }
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var result = await getTransactionByIdHandler.Handle(new GetTransactionByIdQuery(id), cancellationToken);

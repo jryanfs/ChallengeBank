@@ -12,15 +12,15 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("TransactionsDb")
-            ?? throw new InvalidOperationException("Connection string 'TransactionsDb' was not found.");
+        var connectionString = configuration.GetConnectionString("ChallengeBankDb")
+            ?? throw new InvalidOperationException("Connection string 'ChallengeBankDb' was not found.");
 
         services.AddDbContext<TransactionsDbContext>(options =>
             options.UseSqlServer(connectionString, sql =>
                 sql.MigrationsHistoryTable("__EFMigrationsHistory", "transactions")));
 
         services.AddScoped<ITransactionRepository, TransactionRepository>();
-        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<TransactionsDbContext>());
+        services.AddScoped<ITransactionsUnitOfWork>(sp => sp.GetRequiredService<TransactionsDbContext>());
 
         return services;
     }
