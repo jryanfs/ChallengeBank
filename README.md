@@ -54,7 +54,7 @@ Um único banco **`ChallengeBank`** no SQL Server, com schemas separados:
 
 | `clients` | `Clients` |
 
-| `transactions` | `Transactions` |
+| `transactions` | `Transfers` |
 
 
 
@@ -190,11 +190,59 @@ dotnet test
 
 
 
+Inclui testes de **domínio** e **integração** (`tests/Integration/`) — fluxo cliente e fluxo transferência com JWT.
+
+
+
+
+## Formato de resposta (envelope)
+
+Todas as rotas da API (exceto `/health`) retornam:
+
+```json
+{
+  "Status": 200,
+  "Message": "Cliente consultado com sucesso.",
+  "Trace": "0HN7...",
+  "Data": { }
+}
+```
+
+Propriedades em inglês (`Status`, `Message`, `Trace`, `Data`); textos de `Message` em português. Erros **401**, **403**, **404**, **409** e **400** usam o mesmo envelope (ex.: transferência inexistente informa o id).
+
+## Autenticação (JWT + RBAC)
+
+
+
+| Usuário | Senha | Role |
+|---------|-------|------|
+| `user` | `User@123` | User |
+| `admin` | `Admin@123` | Admin |
+
+
+
+1. `POST /api/auth/login` com `{ "username", "password" }` → retorna `accessToken`
+2. Envie `Authorization: Bearer {accessToken}` nas demais rotas (exceto `/health` e login)
+
+
+
+**RBAC nas rotas existentes:**
+
+| Rota | User | Admin |
+|------|------|-------|
+| POST/GET `/api/clients` | Sim | Sim |
+| PATCH `/api/clients/{id}` | Não (403) | Sim |
+| POST/GET `/api/transfers` | Sim | Sim |
+| GET `/api/transfers/user/{userId}` | Não (403) | Sim |
+| GET `/health` | Anônimo | Anônimo |
+
+
+
 ## Postman
 
 
 
-Importe `docs/postman/ChallengeBank.postman_collection.json` — base URL única: `http://localhost:5000`
+Importe `docs/postman/ChallengeBank.postman_collection.json` e o environment `ChallengeBank.Local.postman_environment.json` — execute **Login (admin)** antes do fluxo.
 
 
 
@@ -202,13 +250,19 @@ Importe `docs/postman/ChallengeBank.postman_collection.json` — base URL única
 
 
 
-- `POST /api/clients` — cadastrar cliente
+- `POST /api/auth/login` — obter JWT
 
-- `GET /api/clients/{id}` — consultar cliente
+- `POST /api/clients` — cadastrar cliente (opcional: `address`, `bankingDetails`) — requer JWT
 
-- `POST /api/transactions` — registrar transação
+- `GET /api/clients/{id}` — consultar cliente (com dados bancários)
 
-- `GET /api/transactions/{id}` — consultar transação
+- `PATCH /api/clients/{id}` — atualização parcial (`name`, `email`, `address`, `bankingDetails`)
+
+- `POST /api/transfers` — criar transferência (`senderUserId`, `receiverUserId`, `amount`, `description`) → retorna `{ id, status }`
+
+- `GET /api/transfers/{id}` — detalhe da transferência
+
+- `GET /api/transfers/user/{userId}` — lista de transferências do usuário
 
 - `GET /health` — health check (ambos os DbContexts)
 

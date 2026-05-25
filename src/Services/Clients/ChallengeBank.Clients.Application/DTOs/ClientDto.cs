@@ -7,5 +7,8 @@ public sealed record ClientDto(
     string FullName,
     string DocumentNumber,
     string Email,
+    AddressDto? Address,
+    BankingDetailsDto? BankingDetails,
     ClientStatus Status,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    DateTime? UpdatedAtUtc);

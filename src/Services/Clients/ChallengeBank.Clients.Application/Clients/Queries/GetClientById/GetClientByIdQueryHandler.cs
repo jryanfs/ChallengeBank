@@ -1,6 +1,7 @@
 using ChallengeBank.BuildingBlocks.Application.Abstractions;
 using ChallengeBank.BuildingBlocks.Application.Common;
 using ChallengeBank.Clients.Application.DTOs;
+using ChallengeBank.Clients.Application.Mapping;
 using ChallengeBank.Clients.Domain.Repositories;
 
 namespace ChallengeBank.Clients.Application.Clients.Queries.GetClientById;
@@ -12,16 +13,9 @@ public sealed class GetClientByIdQueryHandler(IClientRepository clientRepository
     {
         var client = await clientRepository.GetByIdAsync(query.ClientId, cancellationToken);
         if (client is null)
-            return Result.Failure<ClientDto>(Error.NotFound("Client.NotFound", "Client not found."));
+            return Result.Failure<ClientDto>(
+                Error.NotFound("Client.NotFound", $"Cliente com id '{query.ClientId}' não foi encontrado."));
 
-        var dto = new ClientDto(
-            client.Id,
-            client.FullName,
-            client.DocumentNumber,
-            client.Email,
-            client.Status,
-            client.CreatedAtUtc);
-
-        return Result.Success(dto);
+        return Result.Success(ClientMapper.ToDto(client));
     }
 }

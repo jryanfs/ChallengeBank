@@ -32,6 +32,20 @@ public sealed class ClientConfiguration : IEntityTypeConfiguration<Client>
             .HasMaxLength(20)
             .IsRequired();
 
+        builder.OwnsOne(c => c.Address, address =>
+        {
+            address.Property(a => a.Street).HasColumnName("AddressStreet").HasMaxLength(300);
+            address.Property(a => a.City).HasColumnName("AddressCity").HasMaxLength(100);
+            address.Property(a => a.State).HasColumnName("AddressState").HasMaxLength(50);
+            address.Property(a => a.PostalCode).HasColumnName("AddressPostalCode").HasMaxLength(20);
+        });
+
+        builder.OwnsOne(c => c.BankingDetails, banking =>
+        {
+            banking.Property(b => b.Agency).HasColumnName("BankAgency").HasMaxLength(20);
+            banking.Property(b => b.AccountNumber).HasColumnName("BankAccountNumber").HasMaxLength(30);
+        });
+
         builder.Property(c => c.CreatedAtUtc)
             .IsRequired();
 
