@@ -1,6 +1,8 @@
-# ChallengerBank — Docker (SQL + 2 APIs)
+# ChallengerBank — Docker
 
 Stack completa: **SQL Server**, **Redis**, **RabbitMQ**, **Clients API**, **Transactions API** e **Notifications Worker**.
+
+Fluxogramas: [../docs/ARQUITETURA-FLUXO.md](../docs/ARQUITETURA-FLUXO.md).
 
 ## Subir tudo
 

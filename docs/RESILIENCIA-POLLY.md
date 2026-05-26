@@ -1,5 +1,7 @@
 # Resiliência — chamada HTTP entre microsserviços
 
+Fluxo no sistema: [ARQUITETURA-FLUXO.md](./ARQUITETURA-FLUXO.md) (§5).
+
 ## Cenário escolhido (requisito F5–F9 do desafio)
 
 Ao criar uma transferência, o microsserviço **Transferências** valida se remetente e destinatário existem consultando o microsserviço **Clientes**:

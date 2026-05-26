@@ -41,7 +41,7 @@ ChallengeBank/
 
 │       └── Notifications/
 
-│           └── ChallengeBank.Notifications.Worker # Consumer RabbitMQ (stub de notificação)
+│           └── ChallengeBank.Notifications.Worker # Consumer RabbitMQ + e-mail SendGrid
 
 ├── tests/
 
@@ -104,9 +104,38 @@ Connection string: `ChallengeBankDb` em `appsettings.json` de cada API
 
 ## Documentação
 
+- [ARQUITETURA-FLUXO.md](docs/ARQUITETURA-FLUXO.md) — **fluxogramas** (componentes, sequências, Gitflow)
 - [MESSAGERIA-RABBITMQ.md](docs/MESSAGERIA-RABBITMQ.md) — mensageria e justificativa assíncrona
 - [SENDGRID.md](docs/SENDGRID.md) — e-mail de notificação (SendGrid)
 - [RESILIENCIA-POLLY.md](docs/RESILIENCIA-POLLY.md) — Polly entre microsserviços
+
+## Arquitetura (visão geral)
+
+Dois microsserviços HTTP + worker em background, banco único por schema, Redis e RabbitMQ. Detalhes, diagramas e exemplos de sequência: **[docs/ARQUITETURA-FLUXO.md](docs/ARQUITETURA-FLUXO.md)**.
+
+```mermaid
+flowchart LR
+    P[Postman] --> CA[Clients API]
+    P --> TA[Transactions API]
+    CA --> SQL[(SQL Server)]
+    TA --> SQL
+    CA <--> RD[(Redis)]
+    TA <--> RD
+    CA --> RMQ[RabbitMQ]
+    RMQ --> W[Notifications Worker]
+    W --> SG[SendGrid]
+    TA -->|Polly HTTP| CA
+```
+
+### Controle de versão (Gitflow)
+
+Cada entrega em **branch de feature** com **Pull Request** para `main`:
+
+| PR | Conteúdo |
+|----|----------|
+| #3 | Microsserviços separados + Polly (Retry, Circuit Breaker, Timeout) |
+| #4 | Redis (cache + anti-duplicata), RabbitMQ, worker de notificações |
+| #5 | E-mail SendGrid (`INotificationService`) |
 
 ## Como executar
 
@@ -182,7 +211,7 @@ dotnet run --project src/Services/Transactions/ChallengeBank.Transactions.API --
 
 
 
-No Visual Studio: perfil **ChallengerBank** em `ChallengeBank.API`. Detalhes em `challengerbank/README.md`.
+No Visual Studio: perfil **https** ou **ChallengerBank** em cada API (solution com os dois projetos). Detalhes em `challengerbank/README.md`.
 
 
 
@@ -240,7 +269,7 @@ dotnet test
 
 
 
-Inclui testes de **domínio** e **integração entre microsserviços** (`tests/Integration/ChallengeBank.Microservices.IntegrationTests`) — 19 testes com `WebApplicationFactory` ligando as duas APIs.
+Inclui testes de **domínio** e **integração entre microsserviços** (`tests/Integration/ChallengeBank.Microservices.IntegrationTests`) — **22 testes** com `WebApplicationFactory` ligando as duas APIs.
 
 ## Cache (Redis) — Clientes
 
@@ -317,13 +346,38 @@ Quando `bankingDetails` é alterado no `PATCH /api/clients/{id}`, o serviço pub
 
 O `ChallengeBank.Notifications.Worker` consome a mensagem e envia **e-mail via SendGrid** (`INotificationService`). Sem API Key configurada, apenas registra no log.
 
-**Por que assíncrono**, diagrama e validação: [docs/MESSAGERIA-RABBITMQ.md](docs/MESSAGERIA-RABBITMQ.md). **SendGrid:** [docs/SENDGRID.md](docs/SENDGRID.md).
+**Por que assíncrono**, diagrama e validação: [docs/MESSAGERIA-RABBITMQ.md](docs/MESSAGERIA-RABBITMQ.md). **Configuração SendGrid:** [docs/SENDGRID.md](docs/SENDGRID.md) (credenciais via `challengerbank/.env` — não versionado; use [challengerbank/.env.example](challengerbank/.env.example)).
+
+### Evidência de teste (SendGrid)
+
+Fluxo validado: Postman → **Mensageria RabbitMQ (3 passos)** → `PATCH` alterando `bankingDetails` → worker → SendGrid → caixa de entrada.
+
+O e-mail de notificação foi entregue com sucesso. Em ambiente de teste com **Single Sender** (Gmail + SendGrid gratuito), a mensagem pode ir para a pasta **Spam** — isso é esperado e **não indica falha** da aplicação. Causas comuns:
+
+| Motivo | Explicação |
+|--------|------------|
+| Remetente novo | Pouca reputação do endereço no SendGrid |
+| Conteúdo “bancário” | Filtros anti-phishing em provedores gratuitos |
+| Sem domínio autenticado | SPF/DKIM completos exigem domínio próprio (produção) |
+
+Para demonstração ou correção, use [SendGrid Activity](https://app.sendgrid.com/email_activity) (status **Delivered**) e o log do worker: `E-mail SendGrid enviado`.
+
+![E-mail de teste — notificação bankingDetails atualizado (pasta Spam do Gmail)](docs/images/sendgrid-email-test.png)
+
+*Assunto: «ChallengeBank — dados bancários atualizados» · remetente via `sendgrid.net` · corpo com agência, conta e data UTC.*
 
 ## Postman
 
 
 
-Importe `docs/postman/ChallengeBank.postman_collection.json` + environment **Local (HTTPS)**. Variáveis `baseUrlClients` / `baseUrlTransfers`. Desative verificação SSL no Postman (cert dev).
+Importe `docs/postman/ChallengeBank.postman_collection.json` e um environment:
+
+| Environment | Quando usar |
+|-------------|-------------|
+| **ChallengeBank - Docker (HTTPS)** | `docker compose up` — portas 7101/7102 |
+| **ChallengeBank - Local (HTTPS)** | APIs via `dotnet run` local |
+
+Variáveis: `baseUrlClients`, `baseUrlTransfers`. Desative verificação SSL no Postman (cert dev). Pastas: **Fluxo completo**, **Mensageria RabbitMQ**, **Create Transfer - duplicata Redis**.
 
 
 
