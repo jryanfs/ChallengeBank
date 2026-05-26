@@ -38,7 +38,7 @@ Entre containers, Transferências chama Clientes em **HTTP** (`http://clients-ap
 
 Ao atualizar `bankingDetails` no `PATCH /api/clients/{id}`, a API publica um evento no exchange `challengebank.events`.
 
-O `notifications-worker` consome esse evento e executa uma **notificação stub** (log).
+O `notifications-worker` consome esse evento e envia **e-mail via SendGrid** (configure `challengerbank/.env` — ver [../docs/SENDGRID.md](../docs/SENDGRID.md)).
 
 ## Parar
 

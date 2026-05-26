@@ -64,7 +64,9 @@ public sealed class UpdateClientCommandHandler(
                             command.ClientId,
                             banking!.Agency,
                             banking!.AccountNumber,
-                            DateTime.UtcNow),
+                            DateTime.UtcNow,
+                            client.Email,
+                            client.FullName),
                         cancellationToken);
                 }
             }

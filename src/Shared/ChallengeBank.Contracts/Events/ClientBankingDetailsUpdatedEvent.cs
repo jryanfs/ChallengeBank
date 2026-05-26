@@ -4,5 +4,7 @@ public sealed record ClientBankingDetailsUpdatedEvent(
     Guid ClientId,
     string Agency,
     string AccountNumber,
-    DateTime UpdatedAtUtc);
+    DateTime UpdatedAtUtc,
+    string? ClientEmail = null,
+    string? ClientFullName = null);
 
