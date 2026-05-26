@@ -1,0 +1,32 @@
+[
+  {
+    "Name": "Microsserviços (HTTPS)",
+    "Projects": [
+      {
+        "Path": "src\\Services\\Clients\\ChallengeBank.Clients.API\\ChallengeBank.Clients.API.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      },
+      {
+        "Path": "src\\Services\\Transactions\\ChallengeBank.Transactions.API\\ChallengeBank.Transactions.API.csproj",
+        "Action": "Start",
+        "DebugTarget": "https"
+      }
+    ]
+  },
+  {
+    "Name": "Microsserviços (ChallengerBank + HTTPS)",
+    "Projects": [
+      {
+        "Path": "src\\Services\\Clients\\ChallengeBank.Clients.API\\ChallengeBank.Clients.API.csproj",
+        "Action": "Start",
+        "DebugTarget": "ChallengerBank"
+      },
+      {
+        "Path": "src\\Services\\Transactions\\ChallengeBank.Transactions.API\\ChallengeBank.Transactions.API.csproj",
+        "Action": "Start",
+        "DebugTarget": "ChallengerBank"
+      }
+    ]
+  }
+]

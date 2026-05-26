@@ -2,7 +2,7 @@
 
 
 
-Solução em **C# 12** / **.NET 8** com **Clean Architecture**, **SOLID** e separação por bounded contexts (Clientes e Transações), com **API unificada** e **banco de dados único**.
+Solução em **C# 12** / **.NET 8** com **Clean Architecture**, **SOLID** e **dois microsserviços** (Clientes e Transferências), cada um com API e deploy independentes, compartilhando o banco SQL Server por schema.
 
 
 
@@ -18,19 +18,25 @@ ChallengeBank/
 
 │   ├── BuildingBlocks/              # Abstrações compartilhadas (DDD + CQRS)
 
-│   ├── Host/
+│   ├── Shared/
 
-│   │   └── ChallengeBank.API        # API única + Swagger unificado
+│   │   └── ChallengeBank.Api.Shared # Envelope, JWT, middleware
 
 │   └── Services/
 
-│       ├── Clients/                 # Bounded context Clientes
+│       ├── Clients/
 
 │       │   ├── Domain / Application / Infrastructure
 
-│       └── Transactions/          # Bounded context Transações
+│       │   └── ChallengeBank.Clients.API      # http://localhost:5101
+
+│       └── Transactions/
 
 │           ├── Domain / Application / Infrastructure
+
+│           └── ChallengeBank.Transactions.API # http://localhost:5102
+
+│               └── HTTP → Clients (Polly: Retry, Circuit Breaker, Timeout)
 
 ├── tests/
 
@@ -58,7 +64,7 @@ Um único banco **`ChallengeBank`** no SQL Server, com schemas separados:
 
 
 
-Connection string: `ChallengeBankDb` em `src/Host/ChallengeBank.API/appsettings.json`
+Connection string: `ChallengeBankDb` em `appsettings.json` de cada API
 
 
 
@@ -76,7 +82,7 @@ Connection string: `ChallengeBankDb` em `src/Host/ChallengeBank.API/appsettings.
 
 | **Infrastructure** | EF Core, `DbContext`, repositórios, migrations |
 
-| **API (Host)** | Controllers, DI, Swagger unificado, health checks |
+| **API** | Controllers, DI, Swagger, health checks (um host por microsserviço) |
 
 
 
@@ -94,6 +100,12 @@ Connection string: `ChallengeBankDb` em `src/Host/ChallengeBank.API/appsettings.
 
 
 
+Suba **os dois microsserviços** (Transferências depende de Clientes via HTTP/HTTPS).
+
+**HTTPS (recomendado):** perfil `https` — Clientes `https://localhost:7101`, Transferências `https://localhost:7102`. Na primeira vez: `dotnet dev-certs https --trust`.
+
+
+
 ### Opção A — LocalDB (padrão)
 
 
@@ -102,21 +114,54 @@ Connection string: `ChallengeBankDb` em `src/Host/ChallengeBank.API/appsettings.
 
 sqllocaldb start MSSQLLocalDB
 
-dotnet run --project src/Host/ChallengeBank.API
+dotnet dev-certs https --trust
+
+# Terminal 1 — Clientes
+
+dotnet run --project src/Services/Clients/ChallengeBank.Clients.API --launch-profile https
+
+
+
+# Terminal 2 — Transferências
+
+dotnet run --project src/Services/Transactions/ChallengeBank.Transactions.API --launch-profile https
 
 ```
 
 
 
-### Opção B — SQL Server (ChallengerBank)
+### Opção B — Docker (SQL + 2 APIs)
 
 
 
 ```bash
 
-cd challengerbank && docker compose up -d
+cd challengerbank && docker compose up -d --build
 
-dotnet run --project src/Host/ChallengeBank.API --launch-profile ChallengerBank
+```
+
+
+
+| API | HTTPS |
+|-----|-------|
+| Clientes | https://localhost:7101/swagger |
+| Transferências | https://localhost:7102/swagger |
+
+Detalhes: [challengerbank/README.md](challengerbank/README.md)
+
+
+
+### Opção C — SQL no Docker + APIs no Visual Studio
+
+
+
+```bash
+
+cd challengerbank && docker compose up -d sqlserver
+
+dotnet run --project src/Services/Clients/ChallengeBank.Clients.API --launch-profile ChallengerBank
+
+dotnet run --project src/Services/Transactions/ChallengeBank.Transactions.API --launch-profile ChallengerBank
 
 ```
 
@@ -130,7 +175,7 @@ Em **Development** e **ChallengerBank**, as migrations são aplicadas automatica
 
 
 
-**Instância SQL Server nativa:** copie `appsettings.Local.example.json` → `appsettings.Local.json` na pasta `ChallengeBank.API`.
+**Instância SQL Server nativa:** copie `appsettings.Local.example.json` → `appsettings.Local.json` em cada API (se necessário).
 
 
 
@@ -140,9 +185,9 @@ Em **Development** e **ChallengerBank**, as migrations são aplicadas automatica
 
 ```bash
 
-dotnet ef database update -p src/Services/Clients/ChallengeBank.Clients.Infrastructure -s src/Host/ChallengeBank.API
+dotnet ef database update -p src/Services/Clients/ChallengeBank.Clients.Infrastructure -s src/Services/Clients/ChallengeBank.Clients.API
 
-dotnet ef database update -p src/Services/Transactions/ChallengeBank.Transactions.Infrastructure -s src/Host/ChallengeBank.API
+dotnet ef database update -p src/Services/Transactions/ChallengeBank.Transactions.Infrastructure -s src/Services/Transactions/ChallengeBank.Transactions.API
 
 ```
 
@@ -156,25 +201,15 @@ dotnet ef database update -p src/Services/Transactions/ChallengeBank.Transaction
 
 
 
-**Projeto de inicialização:** `ChallengeBank.API` (`src/Host/ChallengeBank.API`)
-
-
-
-```bash
-
-dotnet run --project src/Host/ChallengeBank.API
-
-```
-
-
-
 | Recurso | URL |
 
 |---------|-----|
 
-| Swagger (tudo em um) | http://localhost:5000/swagger |
+| Swagger Clientes (HTTPS) | https://localhost:7101/swagger |
 
-| Health check | http://localhost:5000/health |
+| Swagger Transferências (HTTPS) | https://localhost:7102/swagger |
+
+| HTTP (redirect) | :5101 / :5102 |
 
 
 
@@ -190,7 +225,7 @@ dotnet test
 
 
 
-Inclui testes de **domínio** e **integração** (`tests/Integration/`) — fluxo cliente e fluxo transferência com JWT.
+Inclui testes de **domínio** e **integração entre microsserviços** (`tests/Integration/ChallengeBank.Microservices.IntegrationTests`) — 19 testes com `WebApplicationFactory` ligando as duas APIs.
 
 
 
@@ -238,11 +273,15 @@ Propriedades em inglês (`Status`, `Message`, `Trace`, `Data`); textos de `Messa
 
 
 
+## Comunicação entre microsserviços (Polly)
+
+`POST /api/transfers` valida remetente/destinatário com `GET /api/clients/{id}` na API de Clientes (`ClientsService:BaseUrl`). Polly aplica **Timeout**, **Retry** e **Circuit Breaker** — ver [docs/RESILIENCIA-POLLY.md](docs/RESILIENCIA-POLLY.md).
+
 ## Postman
 
 
 
-Importe `docs/postman/ChallengeBank.postman_collection.json` e o environment `ChallengeBank.Local.postman_environment.json` — execute **Login (admin)** antes do fluxo.
+Importe `docs/postman/ChallengeBank.postman_collection.json` + environment **Local (HTTPS)**. Variáveis `baseUrlClients` / `baseUrlTransfers`. Desative verificação SSL no Postman (cert dev).
 
 
 
@@ -264,7 +303,7 @@ Importe `docs/postman/ChallengeBank.postman_collection.json` e o environment `Ch
 
 - `GET /api/transfers/user/{userId}` — lista de transferências do usuário
 
-- `GET /health` — health check (ambos os DbContexts)
+- `GET /health` — health check por microsserviço
 
 
 
@@ -283,5 +322,7 @@ Importe `docs/postman/ChallengeBank.postman_collection.json` e o environment `Ch
 | Banco | SQL Server (banco único `ChallengeBank`) |
 
 | ORM | Entity Framework Core 8 |
+
+| Resiliência HTTP | Microsoft.Extensions.Http.Resilience (Polly) |
 
 

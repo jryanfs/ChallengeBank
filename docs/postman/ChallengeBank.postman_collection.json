@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "challengebank-api-v2",
-    "name": "ChallengeBank API",
-    "description": "API unificada — envelope: `{ Status, Message, Trace, Data? }` (mensagens em português).\n\n**Auth:** Login (admin) primeiro → `Data.accessToken` no header Bearer.\n\n**Credenciais:** admin/Admin@123 | user/User@123",
+    "name": "ChallengeBank — Microsserviços",
+    "description": "HTTPS — **Clientes** `{{baseUrlClients}}` · **Transferências** `{{baseUrlTransfers}}`.\n\nEnvelope: `{ Status, Message, Trace, Data? }`.\n\n**Auth:** Login (admin) em Clientes → `Data.accessToken`.\n\n**SSL dev:** Postman → Settings → desative verificação de certificado SSL.\n\nCredenciais: admin/Admin@123 | user/User@123",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -10,7 +10,8 @@
     "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "baseUrlClients", "value": "https://localhost:7101" },
+    { "key": "baseUrlTransfers", "value": "https://localhost:7102" },
     { "key": "accessToken", "value": "" },
     { "key": "clientId", "value": "" },
     { "key": "clientId2", "value": "" },
@@ -43,7 +44,7 @@
               { "key": "Accept", "value": "application/json" }
             ],
             "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}" },
-            "url": "{{baseUrl}}/api/auth/login"
+            "url": "{{baseUrlClients}}/api/auth/login"
           }
         },
         {
@@ -68,7 +69,7 @@
               { "key": "Accept", "value": "application/json" }
             ],
             "body": { "mode": "raw", "raw": "{\n  \"username\": \"user\",\n  \"password\": \"User@123\"\n}" },
-            "url": "{{baseUrl}}/api/auth/login"
+            "url": "{{baseUrlClients}}/api/auth/login"
           }
         }
       ]
@@ -77,12 +78,21 @@
       "name": "Health",
       "item": [
         {
-          "name": "Health Check",
+          "name": "Health — Clientes",
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",
             "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": "{{baseUrl}}/health"
+            "url": "{{baseUrlClients}}/health"
+          }
+        },
+        {
+          "name": "Health — Transferências",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrlTransfers}}/health"
           }
         }
       ]
@@ -114,7 +124,7 @@
               "mode": "raw",
               "raw": "{\n  \"fullName\": \"Maria Silva Santos\",\n  \"documentNumber\": \"12345678901\",\n  \"email\": \"maria.silva@challengebank.com\",\n  \"address\": {\n    \"street\": \"Rua das Flores, 100\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"postalCode\": \"01310-100\"\n  },\n  \"bankingDetails\": {\n    \"agency\": \"0001\",\n    \"accountNumber\": \"12345-6\"\n  }\n}"
             },
-            "url": "{{baseUrl}}/api/clients"
+            "url": "{{baseUrlClients}}/api/clients"
           }
         },
         {
@@ -141,7 +151,7 @@
               "mode": "raw",
               "raw": "{\n  \"fullName\": \"João Pedro Oliveira\",\n  \"documentNumber\": \"98765432100\",\n  \"email\": \"joao.oliveira@challengebank.com\",\n  \"bankingDetails\": {\n    \"agency\": \"0002\",\n    \"accountNumber\": \"98765-4\"\n  }\n}"
             },
-            "url": "{{baseUrl}}/api/clients"
+            "url": "{{baseUrlClients}}/api/clients"
           }
         },
         {
@@ -162,7 +172,7 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Accept", "value": "application/json" }
             ],
-            "url": "{{baseUrl}}/api/clients/{{clientId}}"
+            "url": "{{baseUrlClients}}/api/clients/{{clientId}}"
           }
         },
         {
@@ -202,7 +212,7 @@
               "mode": "raw",
               "raw": "{\n  \"name\": \"Maria Silva Atualizada\",\n  \"bankingDetails\": {\n    \"agency\": \"0001\",\n    \"accountNumber\": \"99999-9\"\n  }\n}"
             },
-            "url": "{{baseUrl}}/api/clients/{{clientId}}"
+            "url": "{{baseUrlClients}}/api/clients/{{clientId}}"
           }
         },
         {
@@ -213,7 +223,7 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Accept", "value": "application/json" }
             ],
-            "url": "{{baseUrl}}/api/clients/00000000-0000-0000-0000-000000000000"
+            "url": "{{baseUrlClients}}/api/clients/00000000-0000-0000-0000-000000000000"
           }
         }
       ]
@@ -245,7 +255,7 @@
               "mode": "raw",
               "raw": "{\n  \"senderUserId\": \"{{clientId}}\",\n  \"receiverUserId\": \"{{clientId2}}\",\n  \"amount\": 1500.75,\n  \"description\": \"Pagamento de serviços\"\n}"
             },
-            "url": "{{baseUrl}}/api/transfers"
+            "url": "{{baseUrlTransfers}}/api/transfers"
           }
         },
         {
@@ -265,7 +275,7 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Accept", "value": "application/json" }
             ],
-            "url": "{{baseUrl}}/api/transfers/{{transferId}}"
+            "url": "{{baseUrlTransfers}}/api/transfers/{{transferId}}"
           }
         },
         {
@@ -276,7 +286,7 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Accept", "value": "application/json" }
             ],
-            "url": "{{baseUrl}}/api/transfers/user/{{clientId}}"
+            "url": "{{baseUrlTransfers}}/api/transfers/user/{{clientId}}"
           }
         },
         {
@@ -292,7 +302,7 @@
               "mode": "raw",
               "raw": "{\n  \"senderUserId\": \"{{clientId}}\",\n  \"receiverUserId\": \"{{clientId}}\",\n  \"amount\": 100,\n  \"description\": \"Inválido\"\n}"
             },
-            "url": "{{baseUrl}}/api/transfers"
+            "url": "{{baseUrlTransfers}}/api/transfers"
           }
         },
         {
@@ -303,7 +313,7 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Accept", "value": "application/json" }
             ],
-            "url": "{{baseUrl}}/api/transfers/00000000-0000-0000-0000-000000000000"
+            "url": "{{baseUrlTransfers}}/api/transfers/00000000-0000-0000-0000-000000000000"
           }
         }
       ]
@@ -333,16 +343,25 @@
               { "key": "Accept", "value": "application/json" }
             ],
             "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin@123\"\n}" },
-            "url": "{{baseUrl}}/api/auth/login"
+            "url": "{{baseUrlClients}}/api/auth/login"
           }
         },
         {
-          "name": "1. Health",
+          "name": "1. Health Clientes",
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",
             "header": [{ "key": "Accept", "value": "application/json" }],
-            "url": "{{baseUrl}}/health"
+            "url": "{{baseUrlClients}}/health"
+          }
+        },
+        {
+          "name": "1b. Health Transferências",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": "{{baseUrlTransfers}}/health"
           }
         },
         {
@@ -356,7 +375,7 @@
               { "key": "Accept", "value": "application/json" }
             ],
             "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Ana Costa\",\n  \"documentNumber\": \"11122233344\",\n  \"email\": \"ana@challengebank.com\",\n  \"bankingDetails\": { \"agency\": \"0001\", \"accountNumber\": \"11111-1\" }\n}" },
-            "url": "{{baseUrl}}/api/clients"
+            "url": "{{baseUrlClients}}/api/clients"
           }
         },
         {
@@ -370,7 +389,7 @@
               { "key": "Accept", "value": "application/json" }
             ],
             "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Bruno Lima\",\n  \"documentNumber\": \"55566677788\",\n  \"email\": \"bruno@challengebank.com\",\n  \"bankingDetails\": { \"agency\": \"0002\", \"accountNumber\": \"22222-2\" }\n}" },
-            "url": "{{baseUrl}}/api/clients"
+            "url": "{{baseUrlClients}}/api/clients"
           }
         },
         {
@@ -381,7 +400,7 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Accept", "value": "application/json" }
             ],
-            "url": "{{baseUrl}}/api/clients/{{clientId}}"
+            "url": "{{baseUrlClients}}/api/clients/{{clientId}}"
           }
         },
         {
@@ -395,7 +414,7 @@
               { "key": "Accept", "value": "application/json" }
             ],
             "body": { "mode": "raw", "raw": "{\n  \"senderUserId\": \"{{clientId}}\",\n  \"receiverUserId\": \"{{clientId2}}\",\n  \"amount\": 500,\n  \"description\": \"Transferência teste\"\n}" },
-            "url": "{{baseUrl}}/api/transfers"
+            "url": "{{baseUrlTransfers}}/api/transfers"
           }
         },
         {
@@ -406,7 +425,7 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Accept", "value": "application/json" }
             ],
-            "url": "{{baseUrl}}/api/transfers/user/{{clientId}}"
+            "url": "{{baseUrlTransfers}}/api/transfers/user/{{clientId}}"
           }
         },
         {
@@ -417,7 +436,7 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Accept", "value": "application/json" }
             ],
-            "url": "{{baseUrl}}/api/transfers/{{transferId}}"
+            "url": "{{baseUrlTransfers}}/api/transfers/{{transferId}}"
           }
         }
       ]

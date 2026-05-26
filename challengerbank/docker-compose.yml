@@ -9,6 +9,47 @@ services:
       - "14333:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/1433' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  clients-api:
+    build:
+      context: ..
+      dockerfile: challengerbank/Dockerfile.clients
+    container_name: challengerbank-clients-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__ChallengeBankDb: "Server=sqlserver,1433;Database=ChallengeBank;User Id=sa;Password=ChallengeBank@123;TrustServerCertificate=True;MultipleActiveResultSets=true;Connect Timeout=30"
+    ports:
+      - "7101:8081"
+      - "5101:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+  transactions-api:
+    build:
+      context: ..
+      dockerfile: challengerbank/Dockerfile.transactions
+    container_name: challengerbank-transactions-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__ChallengeBankDb: "Server=sqlserver,1433;Database=ChallengeBank;User Id=sa;Password=ChallengeBank@123;TrustServerCertificate=True;MultipleActiveResultSets=true;Connect Timeout=30"
+      ClientsService__BaseUrl: "http://clients-api:8080"
+    ports:
+      - "7102:8081"
+      - "5102:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      clients-api:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   sqlserver-data:
