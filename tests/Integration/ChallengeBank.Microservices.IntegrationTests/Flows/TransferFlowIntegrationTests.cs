@@ -172,6 +172,62 @@ public sealed class TransferFlowIntegrationTests(MicroservicesFixture fixture)
     }
 
     [Fact]
+    public async Task CreateTransfer_WithDuplicateSenderReceiverAndAmount_ReturnsConflictInPortuguese()
+    {
+        var token = await LoginAsAdminAsync();
+        SetBearerToken(token);
+
+        var senderId = await CreateClientAsync(token, "44444444444", "dup-sender@challengebank.com", "Dup Sender");
+        var receiverId = await CreateClientAsync(token, "55555555555", "dup-receiver@challengebank.com", "Dup Receiver");
+
+        var payload = new
+        {
+            senderUserId = senderId,
+            receiverUserId = receiverId,
+            amount = 999.99m,
+            description = "Primeira transferência"
+        };
+
+        var first = await Client.PostAsJsonAsync("/api/transfers", payload);
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var duplicate = await Client.PostAsJsonAsync("/api/transfers", payload);
+        duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var envelope = await ReadEnvelopeAsync<object>(duplicate);
+        envelope.Message.Should().Contain("5 minutos");
+        envelope.Message.Should().Contain("mesmo remetente");
+    }
+
+    [Fact]
+    public async Task CreateTransfer_WithSamePartiesButDifferentAmount_AllowsSecondTransfer()
+    {
+        var token = await LoginAsAdminAsync();
+        SetBearerToken(token);
+
+        var senderId = await CreateClientAsync(token, "66666666666", "amt-sender@challengebank.com", "Amt Sender");
+        var receiverId = await CreateClientAsync(token, "77777777777", "amt-receiver@challengebank.com", "Amt Receiver");
+
+        var first = await Client.PostAsJsonAsync("/api/transfers", new
+        {
+            senderUserId = senderId,
+            receiverUserId = receiverId,
+            amount = 100m,
+            description = "Valor A"
+        });
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var second = await Client.PostAsJsonAsync("/api/transfers", new
+        {
+            senderUserId = senderId,
+            receiverUserId = receiverId,
+            amount = 200m,
+            description = "Valor B"
+        });
+        second.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
     public async Task CreateTransfer_WithSameSenderAndReceiver_ReturnsBadRequestInPortuguese()
     {
         var token = await LoginAsAdminAsync();

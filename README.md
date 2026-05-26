@@ -21,6 +21,7 @@ ChallengeBank/
 │   ├── Shared/
 
 │   │   └── ChallengeBank.Api.Shared # Envelope, JWT, middleware
+│   │   └── ChallengeBank.Contracts  # Contratos (eventos/integrações)
 
 │   └── Services/
 
@@ -37,6 +38,10 @@ ChallengeBank/
 │           └── ChallengeBank.Transactions.API # http://localhost:5102
 
 │               └── HTTP → Clients (Polly: Retry, Circuit Breaker, Timeout)
+
+│       └── Notifications/
+
+│           └── ChallengeBank.Notifications.Worker # Consumer RabbitMQ (stub de notificação)
 
 ├── tests/
 
@@ -93,6 +98,7 @@ Connection string: `ChallengeBankDb` em `appsettings.json` de cada API
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 - **SQL Server LocalDB** (padrão) ou **ChallengerBank** — ver `challengerbank/README.md`
+- **Redis** e **RabbitMQ** (opcional local; no Docker já sobe junto)
 
 
 
@@ -115,6 +121,9 @@ Suba **os dois microsserviços** (Transferências depende de Clientes via HTTP/H
 sqllocaldb start MSSQLLocalDB
 
 dotnet dev-certs https --trust
+
+# (Opcional) Redis + RabbitMQ local via Docker
+# cd challengerbank && docker compose up -d redis rabbitmq
 
 # Terminal 1 — Clientes
 
@@ -227,6 +236,17 @@ dotnet test
 
 Inclui testes de **domínio** e **integração entre microsserviços** (`tests/Integration/ChallengeBank.Microservices.IntegrationTests`) — 19 testes com `WebApplicationFactory` ligando as duas APIs.
 
+## Cache (Redis) — Clientes
+
+O `GET /api/clients/{id}` usa cache Redis com TTL (padrão: 120s) e **invalidação no PATCH**.
+
+Configuração (Clients API):
+
+- `Redis:ConnectionString`
+- `Redis:KeyPrefix` (opcional)
+
+Em ambiente `Testing`, o cache é desabilitado.
+
 
 
 
@@ -273,9 +293,25 @@ Propriedades em inglês (`Status`, `Message`, `Trace`, `Data`); textos de `Messa
 
 
 
+## Anti-duplicata de transferências (Redis)
+
+O `POST /api/transfers` registra no Redis a combinação **remetente + destinatário + valor** por **5 minutos** (`Redis:TransferDuplicateWindowMinutes`). Uma segunda tentativa idêntica retorna **409 Conflict**.
+
+Configuração na API de Transferências: `Redis:ConnectionString`, `Redis:KeyPrefix`, `Redis:TransferDuplicateWindowMinutes`.
+
+No Postman: execute **Create Transfer** e em seguida **Create Transfer - duplicata Redis (409)**.
+
 ## Comunicação entre microsserviços (Polly)
 
 `POST /api/transfers` valida remetente/destinatário com `GET /api/clients/{id}` na API de Clientes (`ClientsService:BaseUrl`). Polly aplica **Timeout**, **Retry** e **Circuit Breaker** — ver [docs/RESILIENCIA-POLLY.md](docs/RESILIENCIA-POLLY.md).
+
+## Mensageria (RabbitMQ) — bankingDetails atualizado
+
+Quando `bankingDetails` é alterado no `PATCH /api/clients/{id}`, o serviço publica `ClientBankingDetailsUpdatedEvent` no exchange `challengebank.events` (routing key `clients.bankingdetails.updated`).
+
+O `ChallengeBank.Notifications.Worker` consome a mensagem e executa uma notificação **stub** (log) via `INotificationService`.
+
+**Por que assíncrono**, diagrama e validação: [docs/MESSAGERIA-RABBITMQ.md](docs/MESSAGERIA-RABBITMQ.md).
 
 ## Postman
 
