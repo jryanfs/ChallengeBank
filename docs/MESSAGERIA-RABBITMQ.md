@@ -1,6 +1,8 @@
 # Mensageria — atualização de `bankingDetails` (RabbitMQ)
 
-Requisitos do desafio: **F1–F4**, **F10–F11** (broker, fluxo real, caso `bankingDetails`, justificativa assíncrona, contrato abstrato e stub).
+Requisitos do desafio: **F1–F4**, **F10–F11** (broker, fluxo real, caso `bankingDetails`, justificativa assíncrona, contrato abstrato e implementação SendGrid).
+
+Diagramas completos: [ARQUITETURA-FLUXO.md](./ARQUITETURA-FLUXO.md).
 
 ## Fluxo escolhido
 

@@ -2,6 +2,8 @@
 
 Quando `bankingDetails` é alterado, o `ChallengeBank.Notifications.Worker` consome o evento RabbitMQ e envia e-mail via **SendGrid** (`INotificationService` → `SendGridNotificationService`).
 
+Fluxo no sistema: [ARQUITETURA-FLUXO.md](./ARQUITETURA-FLUXO.md) (§4).
+
 ## Configuração
 
 | Chave | Obrigatório | Descrição |
