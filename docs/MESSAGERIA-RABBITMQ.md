@@ -4,7 +4,7 @@ Requisitos do desafio: **F1–F4**, **F10–F11** (broker, fluxo real, caso `ban
 
 ## Fluxo escolhido
 
-Quando o **Admin** altera dados bancários no `PATCH /api/clients/{id}`, a API de Clientes persiste no SQL e publica um evento. Um **worker** consome a fila e dispara notificação (hoje: log via stub).
+Quando o **Admin** altera dados bancários no `PATCH /api/clients/{id}`, a API de Clientes persiste no SQL e publica um evento. Um **worker** consome a fila e dispara **e-mail via SendGrid** (fallback em log se não houver API Key).
 
 ```
 PATCH /api/clients/{id}  (Clients API)
@@ -20,7 +20,7 @@ PATCH /api/clients/{id}  (Clients API)
                         ▼
         ChallengeBank.Notifications.Worker
                         │
-                        └─► INotificationService (LogNotificationService — stub)
+                        └─► INotificationService (SendGridNotificationService)
 ```
 
 ## Por que esse endpoint é assíncrono (F4)
@@ -52,7 +52,7 @@ Alternativa citada no desafio: Azure Service Bus (mesmo padrão publish/subscrib
 | `IBankingDetailsEventsPublisher` | Clients.Application | Abstração da publicação |
 | `INotificationService` | `ChallengeBank.Contracts` | Abstração do envio (e-mail/SMS/etc.) |
 | `RabbitMqBankingDetailsEventsPublisher` | Clients.Infrastructure | Implementação RabbitMQ |
-| `LogNotificationService` | Notifications.Worker | Stub que registra no log |
+| `SendGridNotificationService` | Notifications.Worker | E-mail via SendGrid — ver [SENDGRID.md](./SENDGRID.md) |
 
 Publicação ocorre em `UpdateClientCommandHandler` somente se `bankingDetails` foi enviado no PATCH **e** agency/conta mudaram em relação ao valor anterior.
 
@@ -94,7 +94,7 @@ docker compose up -d --build
 docker logs challengerbank-notifications-worker --tail 50
 ```
 
-Esperado: log do stub com `ClientId`, agência e conta.
+Esperado: `E-mail SendGrid enviado` (ou log de fallback se SendGrid não estiver configurado). Ver [SENDGRID.md](./SENDGRID.md).
 
 ## Testes automatizados
 

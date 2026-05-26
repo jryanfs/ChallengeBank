@@ -102,6 +102,12 @@ Connection string: `ChallengeBankDb` em `appsettings.json` de cada API
 
 
 
+## Documentação
+
+- [MESSAGERIA-RABBITMQ.md](docs/MESSAGERIA-RABBITMQ.md) — mensageria e justificativa assíncrona
+- [SENDGRID.md](docs/SENDGRID.md) — e-mail de notificação (SendGrid)
+- [RESILIENCIA-POLLY.md](docs/RESILIENCIA-POLLY.md) — Polly entre microsserviços
+
 ## Como executar
 
 
@@ -309,9 +315,9 @@ No Postman: execute **Create Transfer** e em seguida **Create Transfer - duplica
 
 Quando `bankingDetails` é alterado no `PATCH /api/clients/{id}`, o serviço publica `ClientBankingDetailsUpdatedEvent` no exchange `challengebank.events` (routing key `clients.bankingdetails.updated`).
 
-O `ChallengeBank.Notifications.Worker` consome a mensagem e executa uma notificação **stub** (log) via `INotificationService`.
+O `ChallengeBank.Notifications.Worker` consome a mensagem e envia **e-mail via SendGrid** (`INotificationService`). Sem API Key configurada, apenas registra no log.
 
-**Por que assíncrono**, diagrama e validação: [docs/MESSAGERIA-RABBITMQ.md](docs/MESSAGERIA-RABBITMQ.md).
+**Por que assíncrono**, diagrama e validação: [docs/MESSAGERIA-RABBITMQ.md](docs/MESSAGERIA-RABBITMQ.md). **SendGrid:** [docs/SENDGRID.md](docs/SENDGRID.md).
 
 ## Postman
 

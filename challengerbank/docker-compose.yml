@@ -48,6 +48,10 @@ services:
       RabbitMq__Exchange: "challengebank.events"
       RabbitMq__QueueBankingDetailsUpdated: "notifications.clients.bankingdetails.updated"
       RabbitMq__RoutingKeyBankingDetailsUpdated: "clients.bankingdetails.updated"
+      SendGrid__ApiKey: ${SENDGRID_API_KEY:-}
+      SendGrid__FromEmail: ${SENDGRID_FROM_EMAIL:-}
+      SendGrid__FromName: ${SENDGRID_FROM_NAME:-ChallengeBank}
+      SendGrid__OverrideRecipientEmail: ${SENDGRID_OVERRIDE_TO:-}
     depends_on:
       rabbitmq:
         condition: service_started
