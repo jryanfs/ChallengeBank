@@ -2,6 +2,7 @@ using ChallengeBank.BuildingBlocks.Application.Abstractions;
 using ChallengeBank.BuildingBlocks.Application.Common;
 using ChallengeBank.Transactions.Application.Abstractions;
 using ChallengeBank.Transactions.Application.DTOs;
+using ChallengeBank.Transactions.Application.Integration;
 using ChallengeBank.Transactions.Application.Mapping;
 using ChallengeBank.Transactions.Domain.Repositories;
 
@@ -20,11 +21,19 @@ public sealed class GetTransfersByUserIdQueryHandler(
             return Result.Failure<IReadOnlyList<TransferDto>>(
                 Error.Validation("Transfer.UserRequired", "O identificador do usuário é obrigatório."));
 
-        if (!await clientExistenceChecker.ExistsAsync(query.UserId, cancellationToken))
+        try
+        {
+            if (!await clientExistenceChecker.ExistsAsync(query.UserId, cancellationToken))
+                return Result.Failure<IReadOnlyList<TransferDto>>(
+                    Error.NotFound(
+                        "Transfer.UserNotFound",
+                        $"Cliente com id '{query.UserId}' não foi encontrado."));
+        }
+        catch (ClientsServiceException)
+        {
             return Result.Failure<IReadOnlyList<TransferDto>>(
-                Error.NotFound(
-                    "Transfer.UserNotFound",
-                    $"Cliente com id '{query.UserId}' não foi encontrado."));
+                Error.Failure("Transfer.ClientsServiceUnavailable", "O serviço de clientes está temporariamente indisponível."));
+        }
 
         var transfers = await transferRepository.GetByUserIdAsync(query.UserId, cancellationToken);
         var dtos = transfers.Select(TransferMapper.ToDto).ToList();

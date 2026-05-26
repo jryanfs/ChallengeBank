@@ -1,55 +1,52 @@
-# ChallengerBank — SQL Server (container)
+# ChallengerBank — Docker (SQL + 2 APIs)
 
-Banco único **`ChallengeBank`** em um container SQL Server 2022.
+Stack completa: **SQL Server**, **Clients API** e **Transactions API** com **HTTPS** na máquina host.
 
-## Subir o banco
+## Subir tudo
 
 ```bash
 cd challengerbank
-docker compose up -d
+docker compose up -d --build
 ```
 
-Aguarde **30–60 segundos** na primeira execução.
+Aguarde **1–2 minutos** na primeira execução (build + SQL + migrations).
 
-| Item | Valor |
-|------|-------|
-| Host (na máquina) | `localhost,14333` |
-| Usuário | `sa` |
-| Senha | `ChallengeBank@123` |
-| Database | `ChallengeBank` (criado pelas migrations da API) |
+| Serviço | HTTPS (Postman / browser) | HTTP (redirect interno) |
+|---------|---------------------------|------------------------|
+| **Clientes** | https://localhost:7101/swagger | http://localhost:5101 |
+| **Transferências** | https://localhost:7102/swagger | http://localhost:5102 |
+| **SQL Server** | — | localhost:14333 |
 
-## Rodar a API
+Entre containers, Transferências chama Clientes em **HTTP** (`http://clients-api:8080`) — sem TLS na rede interna.
 
-**Visual Studio:** perfil **ChallengerBank** em `ChallengeBank.API`
+## Postman
 
-**Terminal:**
+1. Importe `docs/postman/ChallengeBank.postman_collection.json`
+2. Environment **ChallengeBank - Docker (HTTPS)** (`ChallengeBank.Docker.postman_environment.json`)
+3. Postman → **Settings** → desative *SSL certificate verification* (certificado autoassinado do container)
+4. Execute **Login (admin)** → fluxo **Runner**
 
-```bash
-cd challengerbank && docker compose up -d
-cd ..
-dotnet run --project src/Host/ChallengeBank.API --launch-profile ChallengerBank
-```
-
-Connection string em `appsettings.ChallengerBank.json` (ambiente `ChallengerBank`).
-
-## Parar o container
+## Parar
 
 ```bash
 docker compose down
 ```
 
-Para remover os dados: `docker compose down -v`
+Dados do SQL: `docker compose down -v`
 
-## DBeaver
+## Apenas SQL (dev local dotnet)
 
-- **Host:** `localhost` · **Port:** `14333`
-- **User:** `sa` / **Password:** `ChallengeBank@123`
-- **Database:** `ChallengeBank`
-- Marque **Trust server certificate**
+```bash
+docker compose up -d sqlserver
+```
 
-## LocalDB vs ChallengerBank
+Depois rode as APIs com perfil `https` ou `ChallengerBank` no Visual Studio / terminal.
 
-| Ambiente | Quando usar |
-|----------|-------------|
-| `Development` (padrão) | LocalDB — `(localdb)\MSSQLLocalDB` |
-| `ChallengerBank` | Container neste compose |
+## Credenciais SQL
+
+| Campo | Valor |
+|-------|-------|
+| Host | `localhost,14333` |
+| User | `sa` |
+| Password | `ChallengeBank@123` |
+| Database | `ChallengeBank` |
