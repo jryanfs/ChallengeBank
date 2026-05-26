@@ -23,6 +23,7 @@ public sealed class TransfersController(
     [ProducesResponseType(typeof(ApiEnvelope), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiEnvelope), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiEnvelope), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiEnvelope), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ApiEnvelope), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Create([FromBody] CreateTransferRequest request, CancellationToken cancellationToken)
     {

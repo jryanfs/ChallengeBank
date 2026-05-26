@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ChallengeBank.Clients.Domain\ChallengeBank.Clients.Domain.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\ChallengeBank.BuildingBlocks.Application\ChallengeBank.BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\ChallengeBank.Contracts\ChallengeBank.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -26,6 +26,8 @@ public static class ApiMessages
     public const string TransferSenderRequired = "O identificador do remetente é obrigatório.";
     public const string TransferReceiverRequired = "O identificador do destinatário é obrigatório.";
     public const string TransferUserRequired = "O identificador do usuário é obrigatório.";
+    public const string TransferDuplicateRecent =
+        "Já existe uma transferência recente com o mesmo remetente, destinatário e valor. Aguarde 5 minutos antes de tentar novamente.";
 
     public static string FromError(Error error) =>
         error.Code switch
@@ -48,6 +50,9 @@ public static class ApiMessages
             "Transfer.UserRequired" => TransferUserRequired,
             "Transfer.Invalid" => string.IsNullOrWhiteSpace(error.Message)
                 ? "Transferência inválida. Verifique os dados informados."
+                : error.Message,
+            "Transfer.DuplicateRecent" => string.IsNullOrWhiteSpace(error.Message)
+                ? TransferDuplicateRecent
                 : error.Message,
             _ when error.Code.StartsWith("Client.", StringComparison.Ordinal) => error.Message,
             _ when error.Code.StartsWith("Transfer.", StringComparison.Ordinal) => error.Message,

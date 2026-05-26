@@ -2,6 +2,7 @@ using System.Reflection;
 using ChallengeBank.Api.Shared.Extensions;
 using ChallengeBank.Api.Shared.Middleware;
 using ChallengeBank.Transactions.API.Extensions;
+using ChallengeBank.Transactions.API.Hosting;
 using ChallengeBank.Transactions.API.Json;
 using ChallengeBank.Transactions.Infrastructure;
 using ChallengeBank.Transactions.Infrastructure.Persistence;
@@ -81,6 +82,8 @@ builder.Services.AddHealthChecks()
 var app = builder.Build();
 
 await app.ApplyTransactionsMigrationsAsync();
+
+TransferDuplicateGuardDiagnostics.LogRegisteredGuard(app);
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<ApiStatusCodeMiddleware>();

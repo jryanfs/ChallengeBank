@@ -13,7 +13,8 @@ namespace ChallengeBank.Transactions.Application.Transfers.Commands.CreateTransf
 public sealed class CreateTransferCommandHandler(
     ITransferRepository transferRepository,
     IClientExistenceChecker clientExistenceChecker,
-    ITransactionsUnitOfWork unitOfWork) : ICommandHandler<CreateTransferCommand, Result<CreateTransferResponseDto>>
+    ITransactionsUnitOfWork unitOfWork,
+    ITransferDuplicateGuard duplicateGuard) : ICommandHandler<CreateTransferCommand, Result<CreateTransferResponseDto>>
 {
     public async Task<Result<CreateTransferResponseDto>> Handle(
         CreateTransferCommand command,
@@ -47,6 +48,18 @@ public sealed class CreateTransferCommandHandler(
                 Error.Failure("Transfer.ClientsServiceUnavailable", "O serviço de clientes está temporariamente indisponível."));
         }
 
+        if (!await duplicateGuard.TryRegisterAsync(
+                command.SenderUserId,
+                command.ReceiverUserId,
+                command.Amount,
+                cancellationToken))
+        {
+            return Result.Failure<CreateTransferResponseDto>(
+                Error.Conflict(
+                    "Transfer.DuplicateRecent",
+                    "Já existe uma transferência recente com o mesmo remetente, destinatário e valor. Aguarde 5 minutos antes de tentar novamente."));
+        }
+
         try
         {
             var transfer = Transfer.Create(
@@ -64,7 +77,21 @@ public sealed class CreateTransferCommandHandler(
         }
         catch (DomainException ex)
         {
+            await duplicateGuard.ReleaseAsync(
+                command.SenderUserId,
+                command.ReceiverUserId,
+                command.Amount,
+                cancellationToken);
             return Result.Failure<CreateTransferResponseDto>(Error.Validation("Transfer.Invalid", ex.Message));
+        }
+        catch
+        {
+            await duplicateGuard.ReleaseAsync(
+                command.SenderUserId,
+                command.ReceiverUserId,
+                command.Amount,
+                cancellationToken);
+            throw;
         }
     }
 }

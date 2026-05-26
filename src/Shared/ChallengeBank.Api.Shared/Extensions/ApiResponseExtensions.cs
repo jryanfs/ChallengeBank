@@ -64,7 +64,8 @@ public static class ApiResponseExtensions
                 || code.StartsWith("Transfer.UserRequired", StringComparison.Ordinal)
                 || code.StartsWith("Transfer.Invalid", StringComparison.Ordinal) => StatusCodes.Status400BadRequest,
 
-            var code when code.StartsWith("Client.DocumentExists", StringComparison.Ordinal) => StatusCodes.Status409Conflict,
+            var code when code.StartsWith("Client.DocumentExists", StringComparison.Ordinal)
+                || code.StartsWith("Transfer.DuplicateRecent", StringComparison.Ordinal) => StatusCodes.Status409Conflict,
 
             _ => StatusCodes.Status400BadRequest
         };
